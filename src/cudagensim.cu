@@ -147,6 +147,30 @@ __device__ void binary_search(double value, int pop_size, double* search_arr, in
 	*result = m;
 }
 
+__device__ void int_qsort(int* arr, int arr_len) {
+	if (arr_len <= 1) {
+		return;
+	}
+
+	int pivot = arr[0];
+	int swaps = 0;
+	int temp;
+
+	for (int i = 0; i < arr_len;i++){
+		if (arr[i] < pivot){
+			temp = arr[swaps];
+			arr[swaps] = arr[i];
+			arr[i] = temp;
+
+			swaps++;
+		}
+	}
+
+	int_qsort(arr, (swaps-1));
+	int_qsort((arr + (swaps+1)), (arr_len - (swaps+1)));
+
+}
+
 // device function
 __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
 	int mutation_rate, int mutation_effect, int crossover_rate, int chrom_size) {
@@ -160,7 +184,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	int distance = 0;
 	int diff;
 
-	int* crossover_locations = NULL
+	int* crossover_locations = NULL;
 	cudaMallocManaged(&crossover_locations, (num_crossover*sizeof(int)));
 
 	for (int i = 0; i < num_crossover; i++) {
@@ -217,7 +241,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	// calculate fitness via cuda
 
-	cudaFree(crossover_locations)
+	cudaFree(crossover_locations);
 
 	child->fitness = get_fitness(child->hat_size);
 	//and we are done!
