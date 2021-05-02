@@ -184,11 +184,10 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	int distance = 0;
 	int diff;
 
-	int* crossover_locations = NULL;
-	cudaMallocManaged(&crossover_locations, (num_crossover*sizeof(int)));
+	int* crossover_locations = (int*) malloc(num_crossover*sizeof(int));
 
 	for (int i = 0; i < num_crossover; i++) {
-		crossover_locations[i] = (curand_poisson(state) % chrom_size);
+		crossover_locations[i] = (curand(state) % chrom_size);
 	}
 	if (num_crossover > 0) {
 		int_qsort(crossover_locations, num_crossover);//changed
@@ -198,10 +197,10 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		diff = crossover_locations[i] - distance;
 
 		if (i % 2 == 0) {
-			cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+			memcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)));
 		}
 		else {
-			cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+			memcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)));
 		}
 		distance = crossover_locations[i];
 	}
@@ -214,10 +213,10 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	}
 
 	if (num_crossover % 2 == 0) {
-		cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+		memcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)));
 	}
 	else {
-		cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+		memcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)));
 	}
 
 	child->hat_size = 0;
@@ -228,7 +227,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	int mutation_location;
 
 	for (int i = 0; i < num_mutations; i++) {
-		mutation_location = (curand_poisson(state) % chrom_size);
+		mutation_location = (curand(state) % chrom_size);
 		mutation = (curand_normal_double(state) * mutation_effect);
 		child->dna_array[mutation_location] += mutation;
 	}
@@ -241,9 +240,9 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	// calculate fitness via cuda
 
-	cudaFree(crossover_locations);
+	free(crossover_locations);
 
-	child->fitness = get_fitness(child->hat_size);
+	// child->fitness = get_fitness(child->hat_size);
 	//and we are done!
 }
 

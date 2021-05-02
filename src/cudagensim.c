@@ -206,6 +206,11 @@ int main(int argc, char const *argv[]) {
 		kernel_launch(parent_gen, child_gen, pop_size, child_pop_size, total_hat_size,
 						cum_siz_arr, mutation_rate, mutation_effect, crossover_rate,
 						chrom_size, rng_ptr, blocksCount, threadsCount);
+
+		// TODO: make more parrallel
+		for (int j = 1; j < child_pop_size; j++) {
+			child_gen[j].fitness = get_fitness(child_gen[j].hat_size);
+		}
 	}
 
 	// MPI Barrier
