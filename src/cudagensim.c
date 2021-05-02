@@ -2,23 +2,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "flagparse.c"
-#include "degnome.h"
+#include "cuda_degnome.h"
 
 // Declare all extern functions
 
 extern void cuda_set_device(size_t myrank);
-extern void cuda_set_seed(unsigned long rng_seed);
+extern void* cuda_set_seed(unsigned long rng_seed, unsigned int pop_size);
 extern void cuda_calloc_gens(unsigned int pop_size, unsigned int num_ranks, unsigned int chrom_size);
 extern void kernel_launch();
 extern void cuda_update_parents();
 extern void cuda_print_parents(unsigned int num_gens);
 extern void cuda_free_gens();
+extern void cuda_free_rng(void* rng);
 
 // Usage information
 
 void usage(void);
 void help_menu(void);
-int jobfunc(void* p, void* tdat);
 
 const char* usageMsg =
     "Usage: polygensim [-h] [-c chromosome_length] [-e mutation_effect]\n"
@@ -125,6 +125,10 @@ int main(int argc, char const *argv[]) {
         rngseed = flags[15];
     }
 
+    // make this command line args
+    size_t threadsCount = 1;
+    size_t blocksCount = 1;
+
     free(flags);
 
     // Set up MPI stuff (init and rank number)
@@ -138,50 +142,53 @@ int main(int argc, char const *argv[]) {
 
     cuda_set_device(my_rank);
 
+    // calculate size of children generation
+    int child_pop_size = pop_size / num_ranks;
+
     // Set random seed
 
-    cuda_set_seed(rngseed);
+    void* rng_ptr = cuda_set_seed(blocksCount, threadsCount, my_rank, rng_seed, child_pop_size);
 
     // Initialize local information and cuda calloc the memory we need (See lines 192 - 204)
 
-    cuda_calloc_gens(pop_size, num_ranks, chrom_size);
+    Degnome* parent_gen = Degnome_cuda_new(int pop_size, int chrom_size);
+    Degnome* child_gen = Degnome_cuda_new(int child_pop_size, int chrom_size);
+
+    Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
+    Degnome_reorganize(Degnome* child_gen, int child_pop_size, int chrom_size);
 
     // Create buffer struct type (How to handle subarrays?)
 
-    const int nitems = 2;
-    int blocklengths[2] = {pop_size / num_ranks, 1};
-    MPI_datatype types[2] = {, MPI_DOUBLE};
-    MPI_datatype degnome_type;
-    MPI_Aint offsets[2];
+    // const int nitems = 2;
+    // int blocklengths[2] = {pop_size / num_ranks, 1};
+    // MPI_datatype types[2] = {, MPI_DOUBLE};
+    // MPI_datatype degnome_type;
+    // MPI_Aint offsets[2];
 
-    offsets[0] = offsetof(Degnome, dna_array);
-    offsets[1] = offsetof(Degnome, hat_size);
+    // offsets[0] = offsetof(Degnome, dna_array);
+    // offsets[1] = offsetof(Degnome, hat_size);
 
-    MPI_Type_create_struct(nitems, blocklengths, offsets, types, &degnome_type);
-    MPI_Type_commit(&degnome_type);
+    // MPI_Type_create_struct(nitems, blocklengths, offsets, types, &degnome_type);
+    // MPI_Type_commit(&degnome_type);
 
     // Run generation simulation
 
+    // get sizes of bytes to send
+    int degnome_size = (sizeof(Degnome) + (chrom_size * sizeof(double));
+
+    int send_bytes = child_pop_size*degnome_size;
+    int recv_bytes = pop_size*degnome_size;
+
     for (int i = 0; i < num_gens; i++) {
 
-        // Call function to launch kernel
-
-        kernel_launch();
-
-        // Get send and receive buffers
-
-        Degnome* send_buff = NULL;
-        Degnome* recv_buff = NULL;
-
-        cuda_set_buffs(&send_buff, &recv_buff);
-
         // Collect info from all other ranks to make a complete generation
+        MPI_Allgather(child_gen, send_bytes, MPI_BYTE, parent_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
 
-        MPI_Allgather(&send_buff, 1, degnome_type, &recv_buff, 1, degnome_type, MPI_COMM_WORLD);
+        // get the pointers right
+        Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
-        // Replace current parent generation
-
-        cuda_update_parents();
+        // make child generation 
+        kernel_launch(parent_gen, child_gen, pop_size, child_pop_size, total_hat_size, cum_siz_arr, rng_ptr, blocksCount, threadsCount);
     }
 
     // MPI Barrier
