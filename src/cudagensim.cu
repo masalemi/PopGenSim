@@ -187,7 +187,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		diff = chrom_size;
 	}
 
-	if (i % 2 == 0) {
+	if (num_crossover % 2 == 0)  {
 		cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
 	}
 	else {
