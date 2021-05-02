@@ -53,7 +53,7 @@ double sqrt_returns(double x) {
 }
 
 double close_returns(double x) {
-	return (target_num - abs(target_num - x));
+	return (target_num - fabs(target_num - x));
 }
 
 double ceiling_returns(double x) {
@@ -61,7 +61,7 @@ double ceiling_returns(double x) {
 		return x;
 	}
 	else {
-		return (target_num) - 5 * abs(target_num - x);
+		return (target_num) - 5 * fabs(target_num - x);
 	}
 }
 double logarithmic_returns(double x) {

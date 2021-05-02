@@ -1,7 +1,7 @@
 #include "flagparse.h"
 #include <string.h>
 
-int parse_flags(int argc, char ** argv, int caller, int ** ret_flags) {
+int parse_flags(int argc, const char** argv, int caller, int** ret_flags) {
 
 	// Flags formatting:
 	// flags[0] ->  	Caller program (1: popgensim, 2: genancesim, 3: devosim)

@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand.h>
+#include <curand_kernel.h>
 #include "cuda_degnome.h"
 #include "fitfunc.h"
 
@@ -22,12 +23,13 @@
 
 extern "C" {
 	void cuda_set_device(size_t my_rank);
-	void* cuda_set_seed(size_t blocksCount, size_t threadsCount, unsigned long rng_seed, unsigned int pop_size);
+	void* cuda_set_seed(size_t blocksCount, size_t threadsCount, int my_rank, unsigned long rng_seed, unsigned int pop_size);
 	void kernel_launch(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
-						int child_pop_size, double total_hat_size, double* cum_siz_arr,
-						void* rng_ptr, size_t blocksCount, size_t threadsCount);
+					int child_pop_size, double total_hat_size, double* cum_siz_arr,
+					double mutation_rate, double mutation_effect, double crossover_rate,
+					int chrom_size, void* rng_ptr, size_t blocksCount, size_t threadsCount);
 	// cuda_update_parents();
-	cuda_print_parents(unsigned int num_gens);
+	void cuda_print_parents(unsigned int num_gens, Degnome* parent_gen, int pop_size, int chrom_size);
 	// void cuda_free_gens();
 	void cuda_free_rng(void* rng_ptr);
 }
@@ -48,11 +50,22 @@ void cuda_set_device(size_t my_rank) {
 		exit(-1);
 	}
 }
+__global__ void kernel_setup_rng (curandStateXORWOW_t* state, int my_rank, unsigned long rng_seed, unsigned int pop_size) {
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	while (index < pop_size) {
+		// Not sure if this is the best way of doing things;
+		// this is based on examples from online
+		// possibly we should add index to the seed
+		curand_init(rng_seed, (index + (my_rank*pop_size)), 0, &state[index]);
+
+		index += blockDim.x * gridDim.x;
+	}
+}
 
 // should be long long
 // THIS FIXES THE ISSUE OF MULTITHREAD DETERMENISM <3 <3 <3
 void* cuda_set_seed(size_t blocksCount, size_t threadsCount, int my_rank, unsigned long rng_seed, unsigned int pop_size) {
-	curandStateXORWOW_t* state;
+	curandStateXORWOW_t* state = NULL;
 	cudaMallocManaged(&state, (pop_size * sizeof(curandStateXORWOW_t)));
 
 	kernel_setup_rng<<<blocksCount,threadsCount>>>(state, my_rank, rng_seed, pop_size);
@@ -64,17 +77,6 @@ void* cuda_set_seed(size_t blocksCount, size_t threadsCount, int my_rank, unsign
 
 }
 
-__global__ void kernel_setup_rng(curandStateXORWOW_t* state, int my_rank, unsigned long rng_seed, unsigned int pop_size) {
-	int index = threadIdx.x + (blockIdx.x * blockDim.x);
-	while (index < pop_size) {
-		// Not sure if this is the best way of doing things;
-		// this is based on examples from online
-		// possibly we should add index to the seed
-		curand_init(rng_seed, (index + (my_rank*pop_size)), 0, &state[index]);
-
-		index += blockDim.x * gridDim.x;
-	}
-}
 
 // Degnome* cuda_calloc_gens(unsigned int pop_size, unsigned int num_ranks, unsigned int chrom_size,
 //                                         unsigned int mutation_rate, unsigned int mutation_effect,
@@ -123,11 +125,11 @@ __global__ void kernel_setup_rng(curandStateXORWOW_t* state, int my_rank, unsign
 
 // Slightly favors 0 index
 
-int binary_search(double value, int pop_size, double* search_arr) {
+__device__ void binary_search(double value, int pop_size, double* search_arr, int* result) {
 
 	int l = 0;
 	int r = pop_size - 1;
-	int m = (l + r) / 2
+	int m = (l + r) / 2;
 
 	while (l <= r) {
 		if (search_arr[m] < value) {
@@ -142,13 +144,85 @@ int binary_search(double value, int pop_size, double* search_arr) {
 		m = (l + r) / 2;
 	}
 
-	return m
+	*result = m;
 }
 
+// device function
+__device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
+	int mutation_rate, int mutation_effect, int crossover_rate, int chrom_size) {
+	// printf("mating\n");
 
-__global__ void kernel_mate(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
-						int child_pop_size, double total_hat_size, double* cum_siz_arr,
-						curandStateXORWOW_t* state) {
+	//get rng
+	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr;
+	
+	//Cross over
+	int num_crossover = curand_poisson(state, crossover_rate);
+	int crossover_locations[num_crossover];
+	int distance = 0;
+	int diff;
+
+	for (int i = 0; i < num_crossover; i++) {
+		crossover_locations[i] = (curand_poisson(state) % chrom_size);
+	}
+	if (num_crossover > 0) {
+		int_qsort(crossover_locations, num_crossover);//changed
+	}
+
+	for (int i = 0; i < num_crossover; i++) {
+		diff = crossover_locations[i] - distance;
+
+		if (i % 2 == 0) {
+			cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+		}
+		else {
+			cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+		}
+		distance = crossover_locations[i];
+	}
+
+	if (num_crossover > 0) {
+		diff = chrom_size - crossover_locations[num_crossover-1];
+	}
+	else {
+		diff = chrom_size;
+	}
+
+	if (i % 2 == 0) {
+		cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+	}
+	else {
+		cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
+	}
+
+	child->hat_size = 0;
+
+	//mutate
+	double mutation;
+	int num_mutations = curand_poisson(state, mutation_rate);
+	int mutation_location;
+
+	for (int i = 0; i < num_mutations; i++) {
+		mutation_location = (curand_poisson(state) % chrom_size);
+		mutation = (curand_normal_double(state) * mutation_effect);
+		child->dna_array[mutation_location] += mutation;
+	}
+
+	//calculate hat_size
+
+	for (int i = 0; i < chrom_size; i++) {
+		child->hat_size += child->dna_array[i];
+	}
+
+	// calculate fitness via cuda
+
+	child->fitness = get_fitness(child->hat_size);
+	//and we are done!
+}
+
+__global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen, int parent_pop_size,
+										int child_pop_size, double total_hat_size, double* cum_siz_arr,
+										double mutation_rate, double mutation_effect, double crossover_rate,
+										int chrom_size, curandStateXORWOW_t* state) {
 
 	// Iterate through each index in child generation subset
 
@@ -169,31 +243,35 @@ __global__ void kernel_mate(Degnome* parent_arr, Degnome* child_arr, int parent_
 
 		// Use binary search to lookup degnomes of both parents (leave as ints)
 
-		int m_index = binary_search(win_m, parent_pop_size, cum_siz_arr);
-		int d_index = binary_search(win_d, parent_pop_size, cum_siz_arr);
+		int m_index = 0;
+		int d_index = 0;
+
+		binary_search(win_m, parent_pop_size, cum_siz_arr, &m_index);
+		binary_search(win_d, parent_pop_size, cum_siz_arr, &d_index);
 
 		// get the parents
-		Degnome* m = parent_gen[m_index];
-		Degnome* d = parent_gen[d_index];
+		Degnome* m = parent_gen + m_index;
+		Degnome* d = parent_gen + d_index;
 
 		// child is just our index
 
-		Degnome* c = child_gen[index];
+		Degnome* c = child_gen + index;
 
 		// mate degnomes
 
-		Degnome_mate(c, m, d, rng, g_mutation_rate, g_mutation_effect, g_crossover_rate);
+		Degnome_mate(c, m, d, rng, mutation_rate, mutation_effect, crossover_rate, chrom_size);
 	}
 }
 
 void kernel_launch(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
 					int child_pop_size, double total_hat_size, double* cum_siz_arr,
-					void* rng_ptr, size_t blocksCount, size_t threadsCount) {
+					double mutation_rate, double mutation_effect, double crossover_rate,
+					int chrom_size, void* rng_ptr, size_t blocksCount, size_t threadsCount) {
 
 	// get rng
-	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr
+	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr;
 	// Call kernel
-	kernel_mate<<<blocksCount,threadsCount>>>(parent_arr, child_arr, parent_pop_size, child_pop_size, total_hat_size, cum_siz_arr, state);
+	kernel_select_and_mate<<<blocksCount,threadsCount>>>(parent_arr, child_arr, parent_pop_size, child_pop_size, total_hat_size, cum_siz_arr, mutation_rate, mutation_effect, crossover_rate, chrom_size, state);
 
 	// Sync Devices
 
@@ -203,14 +281,14 @@ void kernel_launch(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
 // Z
 
 
-void cuda_print_parents(unsigned int num_gens) {
+void cuda_print_parents(unsigned int num_gens, Degnome* parent_gen, int pop_size, int chrom_size) {
 
 	// Print info for parent generation
 
 	printf("Generation %u:\n", num_gens);
-	for (int i = 0; i < g_pop_size; i++) {
+	for (int i = 0; i < pop_size; i++) {
 		printf("Degnome %u\n", i);
-		for (int j = 0; j < g_chrom_size; j++) {
+		for (int j = 0; j < chrom_size; j++) {
 			printf("%lf\t", parent_gen[i].dna_array[j]);
 		}
 		printf("\nTOTAL HAT SIZE: %lg\n\n", parent_gen[i].hat_size);
@@ -229,7 +307,7 @@ void cuda_print_parents(unsigned int num_gens) {
 //     cudaFree(child_gen);
 // }
 
-void* cuda_free_rng(void* rng_ptr) {
+void cuda_free_rng(void* rng_ptr) {
 	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr;
 	cudaFree(state);
 }
