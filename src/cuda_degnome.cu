@@ -23,7 +23,7 @@ extern "C" {
 }
 
 __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
 	Degnome* end_of_dengomes = q + pop_size;
 	double* ptr_itr = (double*) end_of_dengomes;
