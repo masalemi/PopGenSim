@@ -117,6 +117,10 @@ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
 	for (int i = 0; i < chrom_size; i++) {
 		child->hat_size += child->dna_array[i];
 	}
+
+	// calculate fitness via cuda
+
+	child->fitness = get_fitness(child->hat_size);
 	//and we are done!
 }
 

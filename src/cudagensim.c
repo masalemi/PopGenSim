@@ -6,7 +6,7 @@
 
 // Declare all extern functions
 
-extern void cuda_set_device(size_t myrank);
+extern void cuda_set_device(size_t my_rank);
 extern void* cuda_set_seed(unsigned long rng_seed, unsigned int pop_size);
 extern void cuda_calloc_gens(unsigned int pop_size, unsigned int num_ranks, unsigned int chrom_size);
 extern void kernel_launch();
@@ -154,27 +154,25 @@ int main(int argc, char const *argv[]) {
 	Degnome* parent_gen = Degnome_cuda_new(int pop_size, int chrom_size);
 	Degnome* child_gen = Degnome_cuda_new(int child_pop_size, int chrom_size);
 
-	Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
+	double fit;
+	double total_hat_size;
+	double* cum_siz_arr = malloc(pop_size * sizeof(double));
+
+	// Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
 	Degnome_reorganize(Degnome* child_gen, int child_pop_size, int chrom_size);
 
-	// Create buffer struct type (How to handle subarrays?)
+	//initialize degnomes
+	for (int i = 0; i < pop_size; i++) {
+		parent_gen[i].hat_size = 0;
 
-	// const int nitems = 2;
-	// int blocklengths[2] = {pop_size / num_ranks, 1};
-	// MPI_datatype types[2] = {, MPI_DOUBLE};
-	// MPI_datatype degnome_type;
-	// MPI_Aint offsets[2];
-
-	// offsets[0] = offsetof(Degnome, dna_array);
-	// offsets[1] = offsetof(Degnome, hat_size);
-
-	// MPI_Type_create_struct(nitems, blocklengths, offsets, types, &degnome_type);
-	// MPI_Type_commit(&degnome_type);
-
-	// Run generation simulation
+		for (int j = 0; j < chrom_size; j++) {
+			parents[i].dna_array[j] = (i+j+my_rank);	//children isn't initiilized
+			parents[i].hat_size += (i+j+my_rank);
+		}
+	}
 
 	// get sizes of bytes to send
-	int degnome_size = (sizeof(Degnome) + (chrom_size * sizeof(double));
+	int degnome_size = (sizeof(Degnome) + (chrom_size * sizeof(double)));
 
 	int send_bytes = child_pop_size*degnome_size;
 	int recv_bytes = pop_size*degnome_size;
@@ -187,6 +185,14 @@ int main(int argc, char const *argv[]) {
 		// get the pointers right
 		Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
+		// make cum_array
+		for (int j = 1; j < pop_size; j++) {
+			fit = parents[j].fitness;
+
+			total_hat_size += fit;
+			cum_siz_arr[j] = (cum_siz_arr[j-1] + fit);
+		}
+
 		// make child generation 
 		kernel_launch(parent_gen, child_gen, pop_size, child_pop_size, total_hat_size, cum_siz_arr, rng_ptr, blocksCount, threadsCount);
 	}
@@ -197,7 +203,7 @@ int main(int argc, char const *argv[]) {
 
 	// Print whatever we are printing
 
-	if (myrank == 0) {
+	if (my_rank == 0) {
 		cuda_print_parents(num_gens);
 	}
 
@@ -207,7 +213,7 @@ int main(int argc, char const *argv[]) {
 
 	// Make call to cuda function to free memory
 
-	cuda_free_gens()
+	cuda_free_gens();
 	
 	return 0;
 }
