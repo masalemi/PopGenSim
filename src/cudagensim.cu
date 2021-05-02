@@ -157,9 +157,11 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	
 	//Cross over
 	int num_crossover = curand_poisson(state, crossover_rate);
-	int crossover_locations[num_crossover];
 	int distance = 0;
 	int diff;
+
+	int* crossover_locations = NULL
+	cudaMallocManaged(&crossover_locations, (num_crossover*sizeof(int)));
 
 	for (int i = 0; i < num_crossover; i++) {
 		crossover_locations[i] = (curand_poisson(state) % chrom_size);
@@ -187,7 +189,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		diff = chrom_size;
 	}
 
-	if (num_crossover % 2 == 0)  {
+	if (num_crossover % 2 == 0) {
 		cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDefault);
 	}
 	else {
@@ -214,6 +216,8 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	}
 
 	// calculate fitness via cuda
+
+	cudaFree(crossover_locations)
 
 	child->fitness = get_fitness(child->hat_size);
 	//and we are done!
