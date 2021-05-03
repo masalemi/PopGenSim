@@ -27,11 +27,13 @@ extern "C" {
 	void kernel_launch(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
 					int child_pop_size, double total_hat_size, double* cum_siz_arr,
 					double mutation_rate, double mutation_effect, double crossover_rate,
-					int chrom_size, void* rng_ptr, size_t blocksCount, size_t threadsCount);
+					int chrom_size, int** cros_loc_arr, void* rng_ptr, size_t blocksCount,
+					size_t threadsCount);
 	// cuda_update_parents();
 	void cuda_print_parents(unsigned int num_gens, Degnome* parent_gen, int pop_size, int chrom_size);
 	// void cuda_free_gens();
 	void cuda_free_rng(void* rng_ptr);
+	int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size);
 }
 
 void cuda_set_device(size_t my_rank) {
@@ -77,6 +79,16 @@ void* cuda_set_seed(size_t blocksCount, size_t threadsCount, int my_rank, unsign
 
 }
 
+int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size) {
+	int** cros_loc_arr = NULL;
+	cudaMallocManaged(&cros_loc_arr, (child_pop_size * sizeof(int*)));
+
+	for (int i = 0; i < child_pop_size; i++) {
+		cudaMallocManaged((cros_loc_arr + i), (chrom_size * sizeof(int)));
+	}
+
+	return cros_loc_arr;
+}
 
 // Degnome* cuda_calloc_gens(unsigned int pop_size, unsigned int num_ranks, unsigned int chrom_size,
 //                                         unsigned int mutation_rate, unsigned int mutation_effect,
@@ -173,7 +185,8 @@ __device__ void int_qsort(int* arr, int arr_len) {
 
 // device function
 __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
-	int mutation_rate, int mutation_effect, int crossover_rate, int chrom_size) {
+							int mutation_rate, int mutation_effect, int crossover_rate,
+							int* crossover_locations, int chrom_size) {
 	// printf("mating\n");
 
 	//get rng
@@ -181,16 +194,25 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	
 	//Cross over
 	int num_crossover = curand_poisson(state, crossover_rate);
+
+	// prevent overflow
+	while (num_crossover >= chrom_size) {
+		num_crossover = curand_poisson(state, crossover_rate);
+	}
+
 	int distance = 0;
 	int diff;
 
-	int* crossover_locations = (int*) malloc(num_crossover*sizeof(int));
+	// int* crossover_locations = (int*) malloc(num_crossover*sizeof(int));
 
+	// only init as far as num_crossover
 	for (int i = 0; i < num_crossover; i++) {
 		crossover_locations[i] = (curand(state) % chrom_size);
 	}
+
+	// only sort the num_crossover part
 	if (num_crossover > 0) {
-		int_qsort(crossover_locations, num_crossover);//changed
+		int_qsort(crossover_locations, num_crossover);
 	}
 
 	for (int i = 0; i < num_crossover; i++) {
@@ -240,7 +262,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	// calculate fitness via cuda
 
-	free(crossover_locations);
+	// free(crossover_locations);
 
 	// child->fitness = get_fitness(child->hat_size);
 	//and we are done!
@@ -249,7 +271,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen, int parent_pop_size,
 										int child_pop_size, double total_hat_size, double* cum_siz_arr,
 										double mutation_rate, double mutation_effect, double crossover_rate,
-										int chrom_size, curandStateXORWOW_t* state) {
+										int chrom_size, int** cros_loc_arr, curandStateXORWOW_t* state) {
 
 	// Iterate through each index in child generation subset
 
@@ -286,19 +308,22 @@ __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen,
 
 		// mate degnomes
 
-		Degnome_mate(c, m, d, rng, mutation_rate, mutation_effect, crossover_rate, chrom_size);
+		Degnome_mate(c, m, d, rng, mutation_rate, mutation_effect, crossover_rate, cros_loc_arr[index], chrom_size);
 	}
 }
 
 void kernel_launch(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
 					int child_pop_size, double total_hat_size, double* cum_siz_arr,
 					double mutation_rate, double mutation_effect, double crossover_rate,
-					int chrom_size, void* rng_ptr, size_t blocksCount, size_t threadsCount) {
+					int chrom_size, int** cros_loc_arr, void* rng_ptr, size_t blocksCount,
+					size_t threadsCount) {
 
 	// get rng
 	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr;
 	// Call kernel
-	kernel_select_and_mate<<<blocksCount,threadsCount>>>(parent_arr, child_arr, parent_pop_size, child_pop_size, total_hat_size, cum_siz_arr, mutation_rate, mutation_effect, crossover_rate, chrom_size, state);
+	kernel_select_and_mate<<<blocksCount,threadsCount>>>(parent_arr, child_arr, parent_pop_size,
+		child_pop_size, total_hat_size, cum_siz_arr, mutation_rate, mutation_effect,
+		crossover_rate, chrom_size, cros_loc_arr, state);
 
 	// Sync Devices
 

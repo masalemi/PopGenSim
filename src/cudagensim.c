@@ -14,14 +14,16 @@
 extern void cuda_set_device(size_t my_rank);
 extern void* cuda_set_seed(size_t blocksCount, size_t threadsCount, int my_rank, unsigned long rng_seed, unsigned int pop_size);
 extern void cuda_calloc_gens(unsigned int pop_size, unsigned int num_ranks, unsigned int chrom_size);
-extern void kernel_launch(Degnome* parent_gen, Degnome* child_gen, int parent_pop_size,
+extern void kernel_launch(Degnome* parent_arr, Degnome* child_arr, int parent_pop_size,
 					int child_pop_size, double total_hat_size, double* cum_siz_arr,
 					double mutation_rate, double mutation_effect, double crossover_rate,
-					int chrom_size, void* rng_ptr, size_t blocksCount, size_t threadsCount);
+					int chrom_size, int** cros_loc_arr, void* rng_ptr, size_t blocksCount,
+					size_t threadsCount);
 extern void cuda_update_parents();
 extern void cuda_print_parents(unsigned int num_gens, Degnome* parent_gen, int pop_size, int chrom_size);
 extern void cuda_free_gens();
 extern void cuda_free_rng(void* rng);
+extern int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size);
 
 // Usage information
 
@@ -162,6 +164,8 @@ int main(int argc, char const *argv[]) {
 	Degnome* parent_gen = Degnome_cuda_new(pop_size, chrom_size);
 	Degnome* child_gen = Degnome_cuda_new(child_pop_size, chrom_size);
 
+	int** cros_loc_arr = cuda_malloc_cross_loc_arr(child_pop_size, chrom_size);
+
 	double fit;
 	double total_hat_size;
 	double* cum_siz_arr = malloc(pop_size * sizeof(double));
@@ -205,7 +209,7 @@ int main(int argc, char const *argv[]) {
 		// make child generation 
 		kernel_launch(parent_gen, child_gen, pop_size, child_pop_size, total_hat_size,
 						cum_siz_arr, mutation_rate, mutation_effect, crossover_rate,
-						chrom_size, rng_ptr, blocksCount, threadsCount);
+						chrom_size, cros_loc_arr, rng_ptr, blocksCount, threadsCount);
 
 		// TODO: make more parrallel
 		for (int j = 1; j < child_pop_size; j++) {
