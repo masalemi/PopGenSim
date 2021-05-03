@@ -22,6 +22,9 @@ Also add command line args and testing for seeding and threading
 
 fit_func_ptr func_to_run = &linear_returns;
 
+double input;
+double target_num;
+
 void set_function(const char* func_name) {
 	if (strcmp(func_name, "linear") == 0) {
 		func_to_run = &linear_returns;
