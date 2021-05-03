@@ -194,14 +194,13 @@ __device__ void int_qsort(int* arr, int arr_len) {
 			while (l < r) {
 				while (arr[r] >= pivot && l < r) {
 					r--;
-					if (l < r)
-						arr[l++] = arr[r];
 				}
+                if (l < r) arr[l++] = arr[r];
 				while (arr[l] <= pivot && l < r) {
 					l++;
-					if (l < r)
-						arr[r--] = arr[l];
 				}
+                if (l < r) arr[r--] = arr[l];
+
 			}
 			arr[l] = pivot;
 			stack[i + 1].start = l + 1;
