@@ -5,8 +5,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <limits.h>
-#include "fitfunc.c"
-#include "flagparse.c"
+#include "fitfunc.h"
+#include "flagparse.h"
 #include "cuda_degnome.h"
 
 // Declare all extern functions
@@ -81,6 +81,16 @@ const char* helpMsg =
 	"\t --linear\t fitness will be hat_height\n\n"
 	"\t --close\t fitness will be (target - abs(target - hat_height))\n\n"
 	"\t --ceiling\t fitness will quickly level off after passing target\n\n";
+
+void usage(void) {
+	fputs(usageMsg, stderr);
+	exit(EXIT_FAILURE);
+}
+
+void help_menu(void) {
+	fputs(helpMsg, stderr);
+	exit(EXIT_FAILURE);
+}
 
 unsigned long rng_seed = 0;
 

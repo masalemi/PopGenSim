@@ -8,7 +8,7 @@ This program will be used to simulated Polygenic evoltion of
 quantitative traits by using Degnomes as defined above.
 */
 #include "cuda_degnome.h"
-#include "fitfunc.c"
+#include "fitfunc.h"
 #include <string.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
