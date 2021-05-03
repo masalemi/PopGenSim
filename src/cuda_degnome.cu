@@ -29,7 +29,7 @@ __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {
 
 	while (index < pop_size) {
 		// set the dna array
-		q[i]->dna_array = ptr_itr + (index * chrom_size);
+		q[index].dna_array = ptr_itr + (index * chrom_size);
 		// move the pointer
 		index += blockDim.x * gridDim.x;
 	}
