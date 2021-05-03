@@ -11,6 +11,7 @@ quantitative traits by using Degnomes as defined above.
 #include "fitfunc.h"
 #include <string.h>
 #include <cuda.h>
+#include <stdio.h>
 #include <cuda_runtime.h>
 
 extern "C" {
