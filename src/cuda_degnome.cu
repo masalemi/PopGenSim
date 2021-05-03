@@ -24,7 +24,7 @@ extern "C" {
 __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-	printf("Index: %u\n", i);
+	printf("Index: %u\n", index);
 
 	Degnome* end_of_dengomes = q + pop_size;
 	double* ptr_itr = (double*) end_of_dengomes;
@@ -39,7 +39,7 @@ __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {
 
 void Degnome_reorganize(size_t blocksCount, size_t threadsCount, Degnome* q, int pop_size, int chrom_size) {
 	kernel_regorganize<<<blocksCount,threadsCount>>>(q, pop_size, chrom_size);
-	
+
 	cudaDeviceSynchronize();
 }
 
