@@ -192,6 +192,24 @@ int main(int argc, char const *argv[]) {
 	// Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
 	Degnome_reorganize(blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
 
+	unsigned long long int print_me = 0;
+	printf("%llu\n", print_me);
+
+	print_me = (unsigned long long int) child_gen;
+	printf("%llu\n", print_me);
+
+
+	for (int i = 0; i < child_pop_size; i++) {
+		printf("CHILD %u\n", i);
+		print_me = (unsigned long long int) ((void*) child_gen + i);
+		printf("%llu\n", print_me);
+		print_me = (unsigned long long int) ((void*) child_gen[i].dna_array);
+		printf("%llu\n", print_me);
+	}	
+
+	printf("all done\n");
+
+
 	//initialize degnomes
 	for (int i = 0; i < child_pop_size; i++) {
 		child_gen[i].hat_size = 0;
