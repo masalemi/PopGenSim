@@ -37,7 +37,7 @@ extern "C" {
 	// void cuda_free_gens();
 	void cuda_free_rng(void* rng_ptr);
 	int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size);
-	double* cuda_make_cuda_array(int popsize);
+	double* cuda_make_cuda_array(int pop_size);
 }
 
 void cuda_set_device(size_t my_rank) {
@@ -94,10 +94,10 @@ int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size) {
 	return cros_loc_arr;
 }
 
-double* cuda_make_cuda_array(int popsize) {
+double* cuda_make_cuda_array(int pop_size) {
 	double* arr = NULL;
 	cudaMallocManaged(&arr, (popsize * sizeof(double)));
-	return;
+	return arr;
 }
 
 // Degnome* cuda_calloc_gens(unsigned int pop_size, unsigned int num_ranks, unsigned int chrom_size,

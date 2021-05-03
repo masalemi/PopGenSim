@@ -24,7 +24,7 @@ extern void cuda_print_parents(unsigned int num_gens, Degnome* parent_gen, int p
 extern void cuda_free_gens();
 extern void cuda_free_rng(void* rng);
 extern int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size);
-extern double* cuda_make_cuda_array(int popsize);
+extern double* cuda_make_cuda_array(int pop_size);
 
 extern void Degnome_reorganize(size_t blocksCount, size_t threadsCount, Degnome* q, int pop_size, int chrom_size);
 extern Degnome* Degnome_cuda_new(int pop_size, int chrom_size);
@@ -187,7 +187,7 @@ int main(int argc, char const *argv[]) {
 
 	double fit;
 	double total_hat_size;
-	double* cum_siz_arr = cuda_make_cuda_array(popsize);
+	double* cum_siz_arr = cuda_make_cuda_array(pop_size);
 
 	// Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
 	Degnome_reorganize(blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
