@@ -243,6 +243,14 @@ __device__ void int_qsort(int* arr, int arr_len) {
 
 // }
 
+
+__device__ void transfer(double* child, double* parent, int len) {
+
+	for (int i = 0; i < len; i++) {
+		child[i] = parent[i];
+	}
+}
+
 // device function
 __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
 							int mutation_rate, int mutation_effect, int crossover_rate,
@@ -288,10 +296,12 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		diff = crossover_locations[i] - distance;
 
 		if (i % 2 == 0) {
-			cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+			// cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+			transfer(child->dna_array+distance, p1->dna_array+distance, diff);
 		}
 		else {
-			cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+			// cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+			transfer(child->dna_array+distance, p2->dna_array+distance, diff);
 		}
 		distance = crossover_locations[i];
 	}
@@ -306,10 +316,12 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 	}
 
 	if (num_crossover % 2 == 0) {
-		cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+		// cudaMemcpy(child->dna_array+distance, p1->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+		transfer(child->dna_array+distance, p1->dna_array+distance, diff);
 	}
 	else {
-		cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+		// cudaMemcpy(child->dna_array+distance, p2->dna_array+distance, (diff*sizeof(double)), cudaMemcpyDeviceToDevice);
+		transfer(child->dna_array+distance, p2->dna_array+distance, diff);
 	}
 
 	printf("last copy done\n");
