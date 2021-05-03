@@ -91,7 +91,7 @@ include depend
 cuda: cudagensim.* cuda_degnome.* fitfunc.*
 	mpixlc -g cudagensim.c -c -o cudagensim-mpi.o
 	nvcc -g -G -arch=sm_70 cudagensim.cu -c -o cudagensim-cuda.o
-	nvcc -g -G -arch=sm_70 cuda_degnome.cu -c -o cuda_degnome
+	nvcc -g -G -arch=sm_70 cuda_degnome.cu -c -o cuda_degnome.o
 	# nvcc -g -G -arch=sm_70 device_fitfunc.cu -c -o fitfunc.o
 	gcc -g -std=gnu99 -Wall -Wcast-align -Wcast-qual -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wstrict-prototypes -Wno-unused-parameter -Wno-unused-function -Wshadow -Wundef -Wwrite-strings -O0 -fno-inline-functions -c -o flagparse.o flagparse.c
 	gcc -g -std=gnu99 -Wall -Wcast-align -Wcast-qual -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wpointer-arith -Wstrict-prototypes -Wno-unused-parameter -Wno-unused-function -Wshadow -Wundef -Wwrite-strings -O0 -fno-inline-functions -c -o fitfunc.o fitfunc.c

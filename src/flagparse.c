@@ -1,5 +1,7 @@
 #include "flagparse.h"
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 int parse_flags(int argc, const char** argv, int caller, int** ret_flags) {
 
