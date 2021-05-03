@@ -227,16 +227,25 @@ int main(int argc, char const *argv[]) {
 	int send_bytes = child_pop_size*degnome_size;
 	int recv_bytes = pop_size*degnome_size;
 
+	if (my_rank == 0) {
+		cuda_print_parents(999, child_gen, child_pop_size, chrom_size);
+	}
+
 	for (int i = 0; i < num_gens; i++) {
 
 		// Collect info from all other ranks to make a complete generation
 		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, parent_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
+
+		if (my_rank == 0) {
+			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
+		}
 
 		// get the pointers right
 		Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
 		// make cum_array
 		for (int j = 1; j < pop_size; j++) {
+			parent_gen[j].fitness = get_fitness(parent_gen[j].hat_size);
 			fit = parent_gen[j].fitness;
 
 			total_hat_size += fit;

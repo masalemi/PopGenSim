@@ -25,12 +25,11 @@ extern "C" {
 __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-	printf("Index: %u\n", index);
-
 	Degnome* end_of_dengomes = q + pop_size;
 	double* ptr_itr = (double*) end_of_dengomes;
 
 	while (index < pop_size) {
+		printf("Index: %u\n", index);
 		// set the dna array
 		q[index].dna_array = ptr_itr + (index * chrom_size);
 		// move the pointer
