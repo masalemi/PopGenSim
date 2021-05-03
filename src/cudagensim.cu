@@ -8,6 +8,9 @@
 #include <curand_kernel.h>
 #include "cuda_degnome.h"
 #include "fitfunc.h"
+// #include "cuda_gen_rand.h"
+
+#define MAX_LEVELS 10
 
 // Degnome* parent_gen = NULL;
 // double* cum_siz_arr = NULL;
@@ -159,29 +162,79 @@ __device__ void binary_search(double value, int pop_size, double* search_arr, in
 	*result = m;
 }
 
+// TODO: Replace with repeated bernoulli because CUDA doesn't get much speedup
+// from this -> there are a lot of diverging paths here.
+
+typedef struct Range Range;
+struct Range {
+	int start;
+	int end; // Exclusive
+};
+
 __device__ void int_qsort(int* arr, int arr_len) {
-	if (arr_len <= 1) {
-		return;
-	}
+	if (arr_len <= 1) return;
 
-	int pivot = arr[0];
-	int swaps = 0;
-	int temp;
+	Range stack[MAX_LEVELS];
+	int i = 0;
+	stack[0] = (Range) { 0, arr_len };
+	while (i >= 0) {
+		Range curr = stack[i];
+		int l = curr.start;
+		int r = curr.end - 1;
 
-	for (int i = 0; i < arr_len;i++){
-		if (arr[i] < pivot){
-			temp = arr[swaps];
-			arr[swaps] = arr[i];
-			arr[i] = temp;
+		if (l < r) {
+			int pivot = arr[l];
+			while (l < r) {
+				while (arr[r] >= pivot && l < r) {
+					r--;
+					if (l < r)
+						arr[l++] = arr[r];
+				}
+				while (arr[l] <= pivot && l < r) {
+					l++;
+					if (l < r)
+						arr[r--] = arr[l];
+				}
+			}
+			arr[l] = pivot;
+			stack[i + 1].start = l + 1;
+			stack[i + 1].end = stack[i].end;
+			stack[i++].end = l;
 
-			swaps++;
+			// Ensure that the new element at the top has a smaller range
+			if (stack[i].end - stack[i].start > stack[i - 1].end - stack[i - 1].start) {
+				Range tmp = stack[i];
+				stack[i-1] = tmp;
+			}
+		} else {
+			i--;
 		}
 	}
-
-	int_qsort(arr, (swaps-1));
-	int_qsort((arr + (swaps+1)), (arr_len - (swaps+1)));
-
 }
+
+// __device__ void int_qsort(int* arr, int arr_len) {
+// 	if (arr_len <= 1) {
+// 		return;
+// 	}
+
+// 	int pivot = arr[0];
+// 	int swaps = 0;
+// 	int temp;
+
+// 	for (int i = 0; i < arr_len;i++){
+// 		if (arr[i] < pivot){
+// 			temp = arr[swaps];
+// 			arr[swaps] = arr[i];
+// 			arr[i] = temp;
+
+// 			swaps++;
+// 		}
+// 	}
+
+// 	int_qsort(arr, (swaps-1));
+// 	int_qsort((arr + (swaps+1)), (arr_len - (swaps+1)));
+
+// }
 
 // device function
 __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
