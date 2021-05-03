@@ -247,7 +247,7 @@ __device__ void int_qsort(int* arr, int arr_len) {
 __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
 							int mutation_rate, int mutation_effect, int crossover_rate,
 							int* crossover_locations, int chrom_size) {
-	// printf("mating\n");
+	printf("mating\n");
 
 	//get rng
 	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr;
@@ -257,6 +257,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	// prevent overflow
 	while (num_crossover >= chrom_size) {
+		printf("IN LOOP: %u\n", num_crossover);
 		num_crossover = curand_poisson(state, crossover_rate);
 	}
 
@@ -303,6 +304,8 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	child->hat_size = 0;
 
+	printf("before hat size %lf\n", child->hat_size);
+
 	//mutate
 	double mutation;
 	int num_mutations = curand_poisson(state, mutation_rate);
@@ -318,7 +321,9 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	for (int i = 0; i < chrom_size; i++) {
 		child->hat_size += child->dna_array[i];
+		printf("DNA %u\n", child->dna_array[i]);
 	}
+	printf("after hat size %lf\n", child->hat_size);
 
 	// calculate fitness via cuda
 
@@ -369,6 +374,8 @@ __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen,
 		// mate degnomes
 
 		Degnome_mate(c, m, d, rng, mutation_rate, mutation_effect, crossover_rate, cros_loc_arr[index], chrom_size);
+
+		index += blockDim.x * gridDim.x;
 	}
 }
 

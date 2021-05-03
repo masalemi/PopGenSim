@@ -261,6 +261,11 @@ int main(int argc, char const *argv[]) {
 		for (int j = 1; j < child_pop_size; j++) {
 			child_gen[j].fitness = get_fitness(child_gen[j].hat_size);
 		}
+
+		printf("CHILD GEN_____________\n");
+		if (my_rank == 0) {
+			cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
+		}
 	}
 
 	// MPI Barrier
