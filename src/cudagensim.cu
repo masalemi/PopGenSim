@@ -96,7 +96,7 @@ int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size) {
 
 double* cuda_make_cuda_array(int pop_size) {
 	double* arr = NULL;
-	cudaMallocManaged(&arr, (popsize * sizeof(double)));
+	cudaMallocManaged(&arr, (pop_size * sizeof(double)));
 	return arr;
 }
 
