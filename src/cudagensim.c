@@ -227,14 +227,29 @@ int main(int argc, char const *argv[]) {
 	int send_bytes = child_pop_size*degnome_size;
 	int recv_bytes = pop_size*degnome_size;
 
-	if (my_rank == 0) {
-		cuda_print_parents(999, child_gen, child_pop_size, chrom_size);
-	}
+	// if (my_rank == 0) {
+	// 	cuda_print_parents(999, child_gen, child_pop_size, chrom_size);
+	// }
 
 	for (int i = 0; i < num_gens; i++) {
 
+		printf("GENERATION NUMBER: %d\n", i);
+
+		printf("CHILD GEN\n");
+		if (my_rank == 0) {
+			cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
+		}
+
+		printf("BEFORE GATHER\n");
+
+		if (my_rank == 0 && i > 0) {
+			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
+		}
+
 		// Collect info from all other ranks to make a complete generation
 		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, parent_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
+
+		printf("AFTER GATHER\n");
 
 		if (my_rank == 0) {
 			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
@@ -262,10 +277,10 @@ int main(int argc, char const *argv[]) {
 			child_gen[j].fitness = get_fitness(child_gen[j].hat_size);
 		}
 
-		printf("CHILD GEN_____________\n");
-		if (my_rank == 0) {
-			cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
-		}
+		// printf("CHILD GEN_____________\n");
+		// if (my_rank == 0) {
+		// 	cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
+		// }
 	}
 
 	// MPI Barrier
@@ -274,9 +289,9 @@ int main(int argc, char const *argv[]) {
 
 	// Print whatever we are printing
 
-	if (my_rank == 0) {
-		cuda_print_parents(num_gens, parent_gen, pop_size, chrom_size);
-	}
+	// if (my_rank == 0) {
+	// 	cuda_print_parents(num_gens, parent_gen, pop_size, chrom_size);
+	// }
 
 	// MPI Finalize
 

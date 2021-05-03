@@ -254,15 +254,15 @@ __device__ void transfer(double* child, double* parent, int len) {
 __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
 							int mutation_rate, int mutation_effect, int crossover_rate,
 							int* crossover_locations, int chrom_size) {
-	printf("mating\n");
+	// printf("mating\n");
 
 	//get rng
 	curandStateXORWOW_t* state = (curandStateXORWOW_t*) rng_ptr;
-	printf("rng obtained\n");
+	// printf("rng obtained\n");
 	
 	//Cross over
 	int num_crossover = curand_poisson(state, crossover_rate);
-	printf("number of crossover obtained\n");
+	// printf("number of crossover obtained\n");
 
 	// prevent overflow
 	while (num_crossover >= chrom_size) {
@@ -270,7 +270,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		num_crossover = curand_poisson(state, crossover_rate);
 	}
 
-	printf("crossovers checked\n");
+	// printf("crossovers checked\n");
 
 	int distance = 0;
 	int diff;
@@ -282,14 +282,14 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		crossover_locations[i] = (curand(state) % chrom_size);
 	}
 
-	printf("crossover locations obtained\n");
+	// printf("crossover locations obtained\n");
 
 	// only sort the num_crossover part
 	if (num_crossover > 0) {
 		int_qsort(crossover_locations, num_crossover);
 	}
 
-	printf("crossovers sorted\n");
+	// printf("crossovers sorted\n");
 
 	for (int i = 0; i < num_crossover; i++) {
 		diff = crossover_locations[i] - distance;
@@ -305,7 +305,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		distance = crossover_locations[i];
 	}
 
-	printf("all but one copy done\n");
+	// printf("all but one copy done\n");
 
 	if (num_crossover > 0) {
 		diff = chrom_size - crossover_locations[num_crossover-1];
@@ -323,11 +323,11 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 		transfer(child->dna_array+distance, p2->dna_array+distance, diff);
 	}
 
-	printf("last copy done\n");
+	// printf("last copy done\n");
 
 	child->hat_size = 0;
 
-	printf("before hat size %lf\n", child->hat_size);
+	// printf("before hat size %lf\n", child->hat_size);
 
 	//mutate
 	double mutation;
@@ -344,9 +344,9 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	for (int i = 0; i < chrom_size; i++) {
 		child->hat_size += child->dna_array[i];
-		printf("DNA %lf\n", child->dna_array[i]);
+		// printf("DNA %lf\n", child->dna_array[i]);
 	}
-	printf("after hat size %lf\n", child->hat_size);
+	// printf("after hat size %lf\n", child->hat_size);
 
 	// calculate fitness via cuda
 
@@ -365,7 +365,7 @@ __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen,
 
 	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
 
-	printf("Kernel init, child pop size is %u\t index is %lu\n", child_pop_size, index);
+	// printf("Kernel init, child pop size is %u\t index is %lu\n", child_pop_size, index);
 
 	while (index < child_pop_size) {
 
@@ -373,7 +373,7 @@ __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen,
 
 
 		curandStateXORWOW_t* rng = &state[index];
-		printf("rng obtained, index is %lu\n", index);
+		// printf("rng obtained, index is %lu\n", index);
 
 		// Generate two random numbers between 0 and sum hat size
 
@@ -383,7 +383,7 @@ __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen,
 		win_d *= total_hat_size;
 
 
-		printf("parent totals obtained, index is %lu\n", index);
+		// printf("parent totals obtained, index is %lu\n", index);
 
 		// Use binary search to lookup degnomes of both parents (leave as ints)
 
@@ -394,31 +394,31 @@ __global__ void kernel_select_and_mate (Degnome* parent_gen, Degnome* child_gen,
 		binary_search(win_d, parent_pop_size, cum_siz_arr, &d_index);
 
 
-		printf("parent indexes obtained, index is %lu\n", index);
+		// printf("parent indexes obtained, index is %lu\n", index);
 
 		// get the parents
 		Degnome* m = parent_gen + m_index;
 		Degnome* d = parent_gen + d_index;
 
 
-		printf("parent pointers obtained, index is %lu\n", index);
+		// printf("parent pointers obtained, index is %lu\n", index);
 
 		// child is just our index
 
 		Degnome* c = child_gen + index;
 
 
-		printf("child pointers obtained, index is %lu\n", index);
+		// printf("child pointers obtained, index is %lu\n", index);
 
 		// mate degnomes
 
 		Degnome_mate(c, m, d, rng, mutation_rate, mutation_effect, crossover_rate, cros_loc_arr[index], chrom_size);
 
 
-		printf("done mating, index is %lu\n", index);
+		// printf("done mating, index is %lu\n", index);
 		index += blockDim.x * gridDim.x;
 
-		printf("index update, index is %lu\n", index);
+		// printf("index update, index is %lu\n", index);
 	}
 }
 
