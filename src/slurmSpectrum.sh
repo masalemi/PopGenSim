@@ -34,12 +34,5 @@ do
     cpu_list="$cpu_list,$index"
 done
 
-# first command line arg is locaiton of the program to run
-# second command line arg is the number of thousands of bytes to run this on
-# third command line arg can be anything - this tells us to use NVME
-if [ -n "$3" ]; then
-    taskset --cpu-list "$cpu_list" mpirun -hostfile /tmp/hosts.$SLURM_JOB_ID -np $SLURM_NPROCS $1 $2 $SLURM_JOB_ID
-else
-    taskset --cpu-list "$cpu_list" mpirun -hostfile /tmp/hosts.$SLURM_JOB_ID -np $SLURM_NPROCS $1 $2
-fi
+taskset --cpu-list "$cpu_list" mpirun -hostfile /tmp/hosts.$SLURM_JOB_ID -np $SLURM_NPROCS $1
 rm /tmp/hosts.$SLURM_JOB_ID
