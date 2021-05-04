@@ -276,32 +276,53 @@ int main(int argc, char const *argv[]) {
 		printf("BEFORE GATHER\n");
 
 		if (my_rank == 0 && i > 0) {
+			printf("CHILD BYTES BEGIN\n");
 			print_bytes(child_gen, child_pop_size, chrom_size);
+			printf("CHILD BYTES END\n");
 		}
 
 		// Collect info from all other ranks to make a complete generation
-		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, temp_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
+		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, temp_gen, send_bytes, MPI_BYTE, MPI_COMM_WORLD);
 
 		printf("AFTER GATHER\n");
 
-		if (my_rank == 0 && i > 0) {
+		if (my_rank == 0) {
 			print_bytes(temp_gen, pop_size, chrom_size);
 		}
 
+		printf("%u\n", child_pop_size);
+		printf("%u\n", num_ranks);
 		unscramble_generation(blocksCount, threadsCount, temp_gen, parent_gen, num_ranks, child_pop_size, chrom_size);
 
 		printf("AFTER UNSCRAMBLE\n");
-
-
-		if (my_rank == 0 && i > 0) {
-			print_bytes(parent_gen, pop_size, chrom_size);
-		}
 
 		// get the pointers right
 		Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
 
 		printf("AFTER REORGANIZE\n");
+
+
+		if (my_rank == 0) {
+			print_bytes(parent_gen, pop_size, chrom_size);
+
+			unsigned long long int print_me = 0;
+			printf("%llu\n", print_me);
+
+			print_me = (unsigned long long int) parent_gen;
+			printf("%llu\n", print_me);
+
+
+			for (int i = 0; i < pop_size; i++) {
+				printf("CHILD %u\n", i);
+				print_me = (unsigned long long int) ((void*) parent_gen + i);
+				printf("%llu\n", print_me);
+				print_me = (unsigned long long int) ((void*) parent_gen[i].dna_array);
+				printf("%llu\n", print_me);
+			}	
+
+			printf("all done\n");
+		}
 
 		// printf("%llu\n", print_me);
 
