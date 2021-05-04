@@ -38,10 +38,10 @@ int parse_flags(int argc, const char** argv, int caller, int** ret_flags) {
 	flags[5] = 0;
 	flags[6] = 10;
 	flags[7] = 2;
-	flags[8] = 5;
+	flags[8] = 1000; // NUMBER OF GENERATIONS
 	flags[9] = 1;
 	flags[10] = 2;
-	flags[11] = 10;
+	flags[11] = 8192; // POPULATION SIZE
 	flags[12] = 0;
 	flags[13] = 0;
 	flags[14] = 9999;

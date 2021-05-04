@@ -34,6 +34,20 @@ extern Degnome* Degnome_cuda_new(int pop_size, int chrom_size);
 // 								int crossover_rate, int chrom_size);
 extern void Degnome_cuda_free(Degnome* q);
 
+unsigned long long aimos_clock_read(void) {
+
+    unsigned int tbl, tbu0, tbu1;
+
+    do {
+        __asm__ __volatile__ ("mftbu %0" : "=r"(tbu0));
+        __asm__ __volatile__ ("mftb %0" : "=r"(tbl));
+        __asm__ __volatile__ ("mftbu %0" : "=r"(tbu1));
+
+    } while (tbu0 != tbu1);
+
+    return (((unsigned long long)tbu0) << 32) | tbl;
+}
+
 
 // Usage information
 
@@ -155,10 +169,6 @@ int main(int argc, char const *argv[]) {
 		rng_seed = flags[15];
 	}
 
-	// make this command line args
-	size_t threadsCount = 1;
-	size_t blocksCount = 1;
-
 	free(flags);
 
 	// Set up MPI stuff (init and rank number)
@@ -168,12 +178,16 @@ int main(int argc, char const *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
+	// calculate size of children generation
+	int child_pop_size = pop_size / num_ranks;
+
+	// make this command line args
+	size_t threadsCount = 32;
+	size_t blocksCount = child_pop_size;
+
 	// Set CUDA Device Based on MPI rank
 
 	cuda_set_device(my_rank);
-
-	// calculate size of children generation
-	int child_pop_size = pop_size / num_ranks;
 
 	// Set random seed
 
@@ -233,6 +247,8 @@ int main(int argc, char const *argv[]) {
 	// 	cuda_print_parents(999, child_gen, child_pop_size, chrom_size);
 	// }
 
+	unsigned long long start_time = aimos_clock_read();
+
 	for (int i = 0; i < num_gens; i++) {
 
 		// printf("GENERATION NUMBER: %d\n", i);
@@ -263,7 +279,7 @@ int main(int argc, char const *argv[]) {
 
 		// printf("AFTER REORGANIZE\n");
 
-		printf("%llu\n", print_me);
+		// printf("%llu\n", print_me);
 
 		// print_me = (unsigned long long int) parent_gen;
 		// printf("%llu\n", print_me);
@@ -307,11 +323,19 @@ int main(int argc, char const *argv[]) {
 		// }
 	}
 
+	unsigned long long end_time = aimos_clock_read();
+
 	// MPI Barrier
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// Print whatever we are printing
+
+    if (my_rank == 0) {
+
+        printf("TIME INFO: \n");
+        printf("Write Time: %lf \n", ((double) ((end_time - start_time) / 512000000.0)));
+    }
 
 	// if (my_rank == 0) {
 	// 	cuda_print_parents(num_gens, parent_gen, pop_size, chrom_size);

@@ -266,7 +266,7 @@ __device__ void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng
 
 	// prevent overflow
 	while (num_crossover >= chrom_size) {
-		printf("IN LOOP: %u\n", num_crossover);
+		// printf("IN LOOP: %u\n", num_crossover);
 		num_crossover = curand_poisson(state, crossover_rate);
 	}
 
