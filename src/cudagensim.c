@@ -25,6 +25,8 @@ extern void cuda_free_gens();
 extern void cuda_free_rng(void* rng);
 extern int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size);
 extern double* cuda_make_cuda_array(int pop_size);
+extern void cuda_free_any(void* v);
+extern void cuda_free_cross_loc_arr(int** arr, int child_pop_size);
 
 extern void unscramble_generation(Degnome* source, Degnome* dest, int num_ranks, int sub_pop_size, int chrom_size);
 extern void Degnome_reorganize(size_t blocksCount, size_t threadsCount, Degnome* q, int pop_size, int chrom_size);
@@ -342,6 +344,14 @@ int main(int argc, char const *argv[]) {
 	// }
 
 	// MPI Finalize
+
+	cuda_free_any((void*) rng_ptr);
+	cuda_free_any((void*) child_gen);
+	cuda_free_any((void*) parent_gen);
+	cuda_free_any((void*) temp_gen);
+	cuda_free_any((void*) cum_siz_arr);
+
+	cuda_free_cross_loc_arr(cros_loc_arr, child_pop_size);
 
 	MPI_Finalize();
 
