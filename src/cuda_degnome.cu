@@ -35,17 +35,17 @@ void memory_copy(char* source, char* dest, int length) {
 
 void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, Degnome* dest, int num_ranks, int sub_pop_size, int chrom_size) {
 
-	Degnome_reorganize(blocksCount, threadsCount, dest, child_pop_size, chrom_size);
-
 	int full_pop_size = (sub_pop_size*num_ranks);
 
+	Degnome_reorganize(blocksCount, threadsCount, dest, full_pop_size, chrom_size);
+
 	for (int i = 0; i < full_pop_size; i++) {
-		child_gen[i].hat_size = 0;
+		dest[i].hat_size = 0;
 
 		for (int j = 0; j < chrom_size; j++) {
-			child_gen[i].dna_array[j] = 0;
+			dest[i].dna_array[j] = 0;
 		}
-		child_gen[i].fitness = 0;
+		dest[i].fitness = 0;
 	}
 
 }

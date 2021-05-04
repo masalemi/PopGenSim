@@ -221,7 +221,7 @@ int main(int argc, char const *argv[]) {
 	double* cum_siz_arr = cuda_make_cuda_array(pop_size);
 
 	// Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
-	Degnome_reorganize(blocksCount, threadsCount, blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
+	Degnome_reorganize(blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
 
 	// unsigned long long int print_me = 0;
 	// printf("%llu\n", print_me);
@@ -288,7 +288,7 @@ int main(int argc, char const *argv[]) {
 			print_bytes(temp_gen, pop_size, chrom_size);
 		}
 
-		unscramble_generation(temp_gen, parent_gen, num_ranks, child_pop_size, chrom_size);
+		unscramble_generation(blocksCount, threadsCount, temp_gen, parent_gen, num_ranks, child_pop_size, chrom_size);
 
 		printf("AFTER UNSCRAMBLE\n");
 
