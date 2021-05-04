@@ -26,6 +26,7 @@ extern void cuda_free_rng(void* rng);
 extern int** cuda_malloc_cross_loc_arr(int child_pop_size, int chrom_size);
 extern double* cuda_make_cuda_array(int pop_size);
 
+extern void unscramble_generation(Degnome* source, Degnome* dest, int num_ranks, int sub_pop_size, int chrom_size);
 extern void Degnome_reorganize(size_t blocksCount, size_t threadsCount, Degnome* q, int pop_size, int chrom_size);
 extern Degnome* Degnome_cuda_new(int pop_size, int chrom_size);
 // extern void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
@@ -181,6 +182,7 @@ int main(int argc, char const *argv[]) {
 	// Initialize local information and cuda calloc the memory we need (See lines 192 - 204)
 
 	Degnome* parent_gen = Degnome_cuda_new(pop_size, chrom_size);
+	Degnome* temp_gen = Degnome_cuda_new(pop_size, chrom_size);
 	Degnome* child_gen = Degnome_cuda_new(child_pop_size, chrom_size);
 
 	int** cros_loc_arr = cuda_malloc_cross_loc_arr(child_pop_size, chrom_size);
@@ -192,22 +194,22 @@ int main(int argc, char const *argv[]) {
 	// Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
 	Degnome_reorganize(blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
 
-	unsigned long long int print_me = 0;
-	printf("%llu\n", print_me);
+	// unsigned long long int print_me = 0;
+	// printf("%llu\n", print_me);
 
-	print_me = (unsigned long long int) child_gen;
-	printf("%llu\n", print_me);
+	// print_me = (unsigned long long int) child_gen;
+	// printf("%llu\n", print_me);
 
 
-	for (int i = 0; i < child_pop_size; i++) {
-		printf("CHILD %u\n", i);
-		print_me = (unsigned long long int) ((void*) child_gen + i);
-		printf("%llu\n", print_me);
-		print_me = (unsigned long long int) ((void*) child_gen[i].dna_array);
-		printf("%llu\n", print_me);
-	}	
+	// for (int i = 0; i < child_pop_size; i++) {
+	// 	printf("CHILD %u\n", i);
+	// 	print_me = (unsigned long long int) ((void*) child_gen + i);
+	// 	printf("%llu\n", print_me);
+	// 	print_me = (unsigned long long int) ((void*) child_gen[i].dna_array);
+	// 	printf("%llu\n", print_me);
+	// }	
 
-	printf("all done\n");
+	// printf("all done\n");
 
 
 	//initialize degnomes
@@ -233,30 +235,52 @@ int main(int argc, char const *argv[]) {
 
 	for (int i = 0; i < num_gens; i++) {
 
-		printf("GENERATION NUMBER: %d\n", i);
+		// printf("GENERATION NUMBER: %d\n", i);
 
-		printf("CHILD GEN\n");
-		if (my_rank == 0) {
-			cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
-		}
+		// printf("CHILD GEN\n");
+		// if (my_rank == 0) {
+		// 	cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
+		// }
 
-		printf("BEFORE GATHER\n");
+		// printf("BEFORE GATHER\n");
 
-		if (my_rank == 0 && i > 0) {
-			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
-		}
+		// if (my_rank == 0 && i > 0) {
+		// 	cuda_print_parents(i, parent_gen, pop_size, chrom_size);
+		// }
 
 		// Collect info from all other ranks to make a complete generation
-		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, parent_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
+		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, temp_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
 
-		printf("AFTER GATHER\n");
+		// printf("AFTER GATHER\n");
 
-		if (my_rank == 0) {
-			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
-		}
+		unscramble_generation(temp_gen, parent_gen, num_ranks, child_pop_size, chrom_size);
+
+		// printf("AFTER UNSCRAMBLE\n");
 
 		// get the pointers right
 		Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
+
+
+		// printf("AFTER REORGANIZE\n");
+
+		printf("%llu\n", print_me);
+
+		// print_me = (unsigned long long int) parent_gen;
+		// printf("%llu\n", print_me);
+
+		// for (int i = 0; i < pop_size; i++) {
+		// 	printf("PARENT %u\n", i);
+		// 	print_me = (unsigned long long int) ((void*) parent_gen + i);
+		// 	printf("%llu\n", print_me);
+		// 	print_me = (unsigned long long int) ((void*) parent_gen[i].dna_array);
+		// 	printf("%llu\n", print_me);
+		// }	
+
+		// printf("all done\n");
+
+		// if (my_rank == 0) {
+		// 	cuda_print_parents(i, parent_gen, pop_size, chrom_size);
+		// }
 
 		// make cum_array
 		for (int j = 1; j < pop_size; j++) {
