@@ -28,7 +28,7 @@ extern double* cuda_make_cuda_array(int pop_size);
 extern void cuda_free_any(void* v);
 extern void cuda_free_cross_loc_arr(int** arr, int child_pop_size);
 
-extern void unscramble_generation(Degnome* source, Degnome* dest, int num_ranks, int sub_pop_size, int chrom_size);
+extern void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, Degnome* dest, int num_ranks, int sub_pop_size, int chrom_size);
 extern void Degnome_reorganize(size_t blocksCount, size_t threadsCount, Degnome* q, int pop_size, int chrom_size);
 extern Degnome* Degnome_cuda_new(int pop_size, int chrom_size);
 // extern void Degnome_mate(Degnome* child, Degnome* p1, Degnome* p2, void* rng_ptr,
@@ -108,6 +108,19 @@ void usage(void) {
 void help_menu(void) {
 	fputs(helpMsg, stderr);
 	exit(EXIT_FAILURE);
+}
+
+void print_bytes(Degnome* parent_gen, int pop_size, int chrom_size) {
+	int degnome_size = (sizeof(Degnome) + (chrom_size * sizeof(double)));
+	int full_size = pop_size * degnome_size;
+
+	unsigned char* itr = (unsigned char*) parent_gen;
+
+	for (int i = 0; i < full_size; i++) {
+		printf("%x ", itr[i]);
+	}
+
+	printf("\n");
 }
 
 unsigned long rng_seed = 0;
@@ -208,7 +221,7 @@ int main(int argc, char const *argv[]) {
 	double* cum_siz_arr = cuda_make_cuda_array(pop_size);
 
 	// Degnome_reorganize(Degnome* parent_gen, int pop_size, int chrom_size);
-	Degnome_reorganize(blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
+	Degnome_reorganize(blocksCount, threadsCount, blocksCount, threadsCount, child_gen, child_pop_size, chrom_size);
 
 	// unsigned long long int print_me = 0;
 	// printf("%llu\n", print_me);
@@ -253,33 +266,42 @@ int main(int argc, char const *argv[]) {
 
 	for (int i = 0; i < num_gens; i++) {
 
-		// printf("GENERATION NUMBER: %d\n", i);
+		printf("GENERATION NUMBER: %d\n", i);
 
-		// printf("CHILD GEN\n");
-		// if (my_rank == 0) {
-		// 	cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
-		// }
+		printf("CHILD GEN\n");
+		if (my_rank == 0) {
+			cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
+		}
 
-		// printf("BEFORE GATHER\n");
+		printf("BEFORE GATHER\n");
 
-		// if (my_rank == 0 && i > 0) {
-		// 	cuda_print_parents(i, parent_gen, pop_size, chrom_size);
-		// }
+		if (my_rank == 0 && i > 0) {
+			print_bytes(child_gen, child_pop_size, chrom_size);
+		}
 
 		// Collect info from all other ranks to make a complete generation
 		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, temp_gen, recv_bytes, MPI_BYTE, MPI_COMM_WORLD);
 
-		// printf("AFTER GATHER\n");
+		printf("AFTER GATHER\n");
+
+		if (my_rank == 0 && i > 0) {
+			print_bytes(temp_gen, pop_size, chrom_size);
+		}
 
 		unscramble_generation(temp_gen, parent_gen, num_ranks, child_pop_size, chrom_size);
 
-		// printf("AFTER UNSCRAMBLE\n");
+		printf("AFTER UNSCRAMBLE\n");
+
+
+		if (my_rank == 0 && i > 0) {
+			print_bytes(parent_gen, pop_size, chrom_size);
+		}
 
 		// get the pointers right
 		Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
 
-		// printf("AFTER REORGANIZE\n");
+		printf("AFTER REORGANIZE\n");
 
 		// printf("%llu\n", print_me);
 
@@ -296,9 +318,9 @@ int main(int argc, char const *argv[]) {
 
 		// printf("all done\n");
 
-		// if (my_rank == 0) {
-		// 	cuda_print_parents(i, parent_gen, pop_size, chrom_size);
-		// }
+		if (my_rank == 0) {
+			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
+		}
 
 		// make cum_array
 		for (int j = 1; j < pop_size; j++) {
