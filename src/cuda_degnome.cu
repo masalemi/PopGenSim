@@ -27,9 +27,11 @@ extern "C" {
 
 // }
 
-void memory_copy(char* source, char* dest, int length) {
-	for (int i = 0; i < length; i++) {
-		dest[i] = source[i];
+__global__ void memory_copy(char* source, char* dest, int length) {
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	while (index < length) {
+		dest[index] = source[index];
+		index += blockDim.x * gridDim.x;
 	}
 }
 
@@ -80,9 +82,12 @@ void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, D
 		printf("Source hat_size %lf\n", source_Degnomes->hat_size);
 		printf("Source DNA 0 %lf\n", source_DNA[0]);
 		printf("copying, %u\n", i);
-		memory_copy(((char*) source_Degnomes), ((char*) dest_Degnomes), (sub_pop_size*sizeof(Degnome)));
-		memory_copy(((char*) source_DNA), ((char*) dest_DNA), (sub_pop_size*chrom_size*sizeof(double)));
-
+		
+		memory_copy<<<blocksCount,threadsCount>>>(((char*) source_Degnomes), ((char*) dest_Degnomes), (sub_pop_size*sizeof(Degnome)));
+		cudaDeviceSynchronize();
+		memory_copy<<<blocksCount,threadsCount>>>(((char*) source_DNA), ((char*) dest_DNA), (sub_pop_size*chrom_size*sizeof(double)));
+		cudaDeviceSynchronize();
+		
 		printf("Dest hat_size %lf\n", dest_Degnomes->hat_size);
 		printf("Dest DNA 0 %lf\n", dest_DNA[0]);
 
@@ -107,7 +112,11 @@ void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, D
 
 
 		printf("updated source, %u\n", i);
-	}	
+	}
+
+	Degnome_reorganize(blocksCount, threadsCount, dest, (sub_pop_size*num_ranks), chrom_size);
+
+	printf("reorganized\n");
 }
 
 __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {

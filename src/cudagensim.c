@@ -297,7 +297,8 @@ int main(int argc, char const *argv[]) {
 		printf("AFTER UNSCRAMBLE\n");
 
 		// get the pointers right
-		Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
+		// now done in unscramble
+		// Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
 
 		printf("AFTER REORGANIZE\n");
