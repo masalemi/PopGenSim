@@ -244,7 +244,7 @@ int main(int argc, char **argv) {
 	Degnome* children;
 	Degnome* temp;
 
-	printf("%u, %u, %u\n", chrom_size, pop_size, num_gens);
+	// printf("%u, %u, %u\n", chrom_size, pop_size, num_gens);
 
 	parents = malloc(pop_size*sizeof(Degnome));
 	children = malloc(pop_size*sizeof(Degnome));

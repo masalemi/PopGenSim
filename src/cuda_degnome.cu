@@ -60,10 +60,10 @@ __global__ void memory_copy(char* source, char* dest, int length) {
 void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, Degnome* dest, int num_ranks, int sub_pop_size, int chrom_size) {
 
 
-	printf("Source DNA 0 %lf\n", ((double*) (source+sub_pop_size))[0]);
+	// printf("Source DNA 0 %lf\n", ((double*) (source+sub_pop_size))[0]);
 
-	printf("start\n");
-	printf("%u\n", (num_ranks*sub_pop_size));
+	// printf("start\n");
+	// printf("%u\n", (num_ranks*sub_pop_size));
 	Degnome* dest_end_of_dengomes = dest + (num_ranks*sub_pop_size);
 
 	double* dest_DNA = (double*) dest_end_of_dengomes;
@@ -75,28 +75,28 @@ void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, D
 
 	double* double_converter = NULL;
 
-	printf("done init\n");
+	// printf("done init\n");
 
 	for (int i = 0; i < num_ranks; i++) {
 
-		printf("Source hat_size %lf\n", source_Degnomes->hat_size);
-		printf("Source DNA 0 %lf\n", source_DNA[0]);
-		printf("copying, %u\n", i);
+		// printf("Source hat_size %lf\n", source_Degnomes->hat_size);
+		// printf("Source DNA 0 %lf\n", source_DNA[0]);
+		// printf("copying, %u\n", i);
 		
 		memory_copy<<<blocksCount,threadsCount>>>(((char*) source_Degnomes), ((char*) dest_Degnomes), (sub_pop_size*sizeof(Degnome)));
 		cudaDeviceSynchronize();
 		memory_copy<<<blocksCount,threadsCount>>>(((char*) source_DNA), ((char*) dest_DNA), (sub_pop_size*chrom_size*sizeof(double)));
 		cudaDeviceSynchronize();
 		
-		printf("Dest hat_size %lf\n", dest_Degnomes->hat_size);
-		printf("Dest DNA 0 %lf\n", dest_DNA[0]);
+		// printf("Dest hat_size %lf\n", dest_Degnomes->hat_size);
+		// printf("Dest DNA 0 %lf\n", dest_DNA[0]);
 
-		printf("done copying, %u\n", i);
+		// printf("done copying, %u\n", i);
 
 		dest_DNA += (sub_pop_size*chrom_size);
 		dest_Degnomes += sub_pop_size;
 
-		printf("updated dest, %u\n", i);
+		// printf("updated dest, %u\n", i);
 
 		source_DNA += (sub_pop_size*chrom_size);
 		source_Degnomes += sub_pop_size;
@@ -111,12 +111,12 @@ void unscramble_generation(int blocksCount, int threadsCount, Degnome* source, D
 		source_Degnomes = (Degnome*) double_converter;
 
 
-		printf("updated source, %u\n", i);
+		// printf("updated source, %u\n", i);
 	}
 
 	Degnome_reorganize(blocksCount, threadsCount, dest, (sub_pop_size*num_ranks), chrom_size);
 
-	printf("reorganized\n");
+	// printf("reorganized\n");
 }
 
 __global__ void kernel_regorganize(Degnome* q, int pop_size, int chrom_size) {

@@ -198,7 +198,7 @@ int main(int argc, char const *argv[]) {
 
 	// make this command line args
 	size_t threadsCount = 32;
-	size_t blocksCount = child_pop_size;
+	size_t blocksCount = child_pop_size / threadsCount;
 
 	// Set CUDA Device Based on MPI rank
 
@@ -266,63 +266,63 @@ int main(int argc, char const *argv[]) {
 
 	for (int i = 0; i < num_gens; i++) {
 
-		printf("GENERATION NUMBER: %d\n", i);
+		// printf("GENERATION NUMBER: %d\n", i);
 
-		printf("CHILD GEN\n");
-		if (my_rank == 0) {
-			cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
-		}
+		// printf("CHILD GEN\n");
+		// if (my_rank == 0) {
+		// 	cuda_print_parents(i, child_gen, child_pop_size, chrom_size);
+		// }
 
-		printf("BEFORE GATHER\n");
+		// printf("BEFORE GATHER\n");
 
-		if (my_rank == 0 && i > 0) {
-			printf("CHILD BYTES BEGIN\n");
-			print_bytes(child_gen, child_pop_size, chrom_size);
-			printf("CHILD BYTES END\n");
-		}
+		// if (my_rank == 0 && i > 0) {
+		// 	// printf("CHILD BYTES BEGIN\n");
+		// 	print_bytes(child_gen, child_pop_size, chrom_size);
+		// 	// printf("CHILD BYTES END\n");
+		// }
 
 		// Collect info from all other ranks to make a complete generation
 		MPI_Allgather(child_gen, send_bytes, MPI_BYTE, temp_gen, send_bytes, MPI_BYTE, MPI_COMM_WORLD);
 
-		printf("AFTER GATHER\n");
+		// printf("AFTER GATHER\n");
 
-		if (my_rank == 0) {
-			print_bytes(temp_gen, pop_size, chrom_size);
-		}
+		// if (my_rank == 0) {
+		// 	print_bytes(temp_gen, pop_size, chrom_size);
+		// }
 
-		printf("%u\n", child_pop_size);
-		printf("%u\n", num_ranks);
+		// printf("%u\n", child_pop_size);
+		// printf("%u\n", num_ranks);
 		unscramble_generation(blocksCount, threadsCount, temp_gen, parent_gen, num_ranks, child_pop_size, chrom_size);
 
-		printf("AFTER UNSCRAMBLE\n");
+		// printf("AFTER UNSCRAMBLE\n");
 
 		// get the pointers right
 		// now done in unscramble
 		// Degnome_reorganize(blocksCount, threadsCount, parent_gen, pop_size, chrom_size);
 
 
-		printf("AFTER REORGANIZE\n");
+		// printf("AFTER REORGANIZE\n");
 
 
 		if (my_rank == 0) {
-			print_bytes(parent_gen, pop_size, chrom_size);
+			// print_bytes(parent_gen, pop_size, chrom_size);
 
-			unsigned long long int print_me = 0;
-			printf("%llu\n", print_me);
+			// unsigned long long int print_me = 0;
+			// printf("%llu\n", print_me);
 
-			print_me = (unsigned long long int) parent_gen;
-			printf("%llu\n", print_me);
+			// print_me = (unsigned long long int) parent_gen;
+			// printf("%llu\n", print_me);
 
 
-			for (int i = 0; i < pop_size; i++) {
-				printf("CHILD %u\n", i);
-				print_me = (unsigned long long int) ((void*) parent_gen + i);
-				printf("%llu\n", print_me);
-				print_me = (unsigned long long int) ((void*) parent_gen[i].dna_array);
-				printf("%llu\n", print_me);
-			}	
+			// for (int i = 0; i < pop_size; i++) {
+			// 	printf("CHILD %u\n", i);
+			// 	print_me = (unsigned long long int) ((void*) parent_gen + i);
+			// 	printf("%llu\n", print_me);
+			// 	print_me = (unsigned long long int) ((void*) parent_gen[i].dna_array);
+			// 	printf("%llu\n", print_me);
+			// }	
 
-			printf("all done\n");
+			// printf("all done\n");
 		}
 
 		// printf("%llu\n", print_me);
@@ -340,9 +340,9 @@ int main(int argc, char const *argv[]) {
 
 		// printf("all done\n");
 
-		if (my_rank == 0) {
-			cuda_print_parents(i, parent_gen, pop_size, chrom_size);
-		}
+		// if (my_rank == 0) {
+		// 	cuda_print_parents(i, parent_gen, pop_size, chrom_size);
+		// }
 
 		// make cum_array
 		for (int j = 1; j < pop_size; j++) {
@@ -378,9 +378,15 @@ int main(int argc, char const *argv[]) {
 	// Print whatever we are printing
 
     if (my_rank == 0) {
-
+    	printf("Generations: %d\n", num_gens);
+    	printf("Parent Pop Size: %d\n", pop_size);
+    	printf("Child Pop Size: %d\n", child_pop_size);
+    	printf("Chrom Size: %d\n", chrom_size);
+    	printf("Number of Ranks: %d\n", num_ranks);
+    	printf("Number of Blocks: %lu\n", blocksCount);
+    	printf("Threads per Block: %lu\n", threadsCount);
         printf("TIME INFO: \n");
-        printf("Write Time: %lf \n", ((double) ((end_time - start_time) / 512000000.0)));
+        printf("Simulation Time: %lf \n", ((double) ((end_time - start_time) / 512000000.0)));
     }
 
 	// if (my_rank == 0) {

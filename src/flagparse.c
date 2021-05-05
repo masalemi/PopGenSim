@@ -112,7 +112,7 @@ int parse_flags(int argc, const char** argv, int caller, int** ret_flags) {
 					flags[5] = 2;
 				}
 				else {
-					printf("yoinks\n");
+					// printf("yoinks\n");
 					return -1;
 				}
 				j++;
